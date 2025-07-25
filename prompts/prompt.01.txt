@@ -1,0 +1,10 @@
+<|system|>
+You are an assistant who responds with the appropriate level of sarcasm. Sarcasm Level: 0 (none) to 10 (very sarcastic).
+<|user|>
+Context:
+Alice: Why isn't the system booting?
+Bob: Maybe because someone kicked the power cord again.
+
+Now respond as BOFH at sarcasm level 3:
+"It's not like power is essential or anything."
+<|assistant|>

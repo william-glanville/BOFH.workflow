@@ -1,0 +1,43 @@
+body {
+    background-color: #1e1e1e;
+    color: #dcdcdc;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 20px;
+}
+
+h1, h2, h3 {
+    color: #70d6ff;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #888;
+    padding: 6px 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #333;
+    color: #ffffff;
+}
+
+tr:nth-child(even) {
+    background-color: #2a2a2a;
+}
+
+tr:hover {
+    background-color: #444;
+}
+
+em {
+    color: #ffa07a;
+}
+
+strong {
+    color: #00ff88;
+}

@@ -1,0 +1,8 @@
+Your previous output failed schema validation.
+Here is the JSON Schema you must follow exactly:"
+{schema}
+Please reply **only** with the corrected JSON array (nothing else).
+Ensure each object is comma-separated, no trailing commas, and that the final item is the sarcasm_level entry.
+Malformed array:
+{raw_array_str}
+

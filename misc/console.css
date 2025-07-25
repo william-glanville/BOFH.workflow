@@ -1,0 +1,49 @@
+table#info_table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+  border: 2px solid #888;
+  font-family: 'Segoe UI Emoji', 'Segoe UI', sans-serif;
+}
+
+table#info_table th, table#info_table td {
+  border: 1px solid #888;
+  padding: 8px;
+  text-align: left;
+  background-color: #2e2e2e;
+  color: #f0f0f0;
+}
+
+table#info_table th {
+  background-color: #1a1a1a;
+  font-weight: bold;
+}
+
+.banner {
+    border: 2px solid {border_color};
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #1a1a1a;
+    color: white;
+    font-size: 24px;
+    text-align: center;
+    font-weight: bold;
+    font-family: 'Segoe UI Emoji', 'Segoe UI', sans-serif;
+}
+.log {
+    background-color: #e0f2cc;
+    color: #0894c1;
+    font-size: 14px;
+    text-align: left;
+    font-weight: normal;
+    font-family: 'Segoe UI Emoji', 'Segoe UI', sans-serif;
+}
+.telemetry_message {
+  margin-bottom: 8px;
+  font-family: sans-serif;
+  color: #283747;
+}
+
+.telemetry_message strong {
+  color: #17202a;
+}

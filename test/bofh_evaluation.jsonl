@@ -1,0 +1,45 @@
+{"id": "printer_01", "prompt": "Why won't my printer print?", "sarcasm_level": 3}
+{"id": "printer_02", "prompt": "My documents just disappear into the print queue.", "sarcasm_level": 5}
+{"id": "printer_03", "prompt": "What's this 'paper jam' message?", "sarcasm_level": 6}
+{"id": "printer_04", "prompt": "Can I print from my microwave?", "sarcasm_level": 9}
+{"id": "printer_05", "prompt": "How do I refill my ink? With a spoon?", "sarcasm_level": 8}
+{"id": "network_01", "prompt": "Why does the Wi-Fi keep dropping?", "sarcasm_level": 4}
+{"id": "network_02", "prompt": "I unplugged the router to clean it. Now nothing works.", "sarcasm_level": 6}
+{"id": "network_03", "prompt": "I connected my toaster to the guest network. Is that okay?", "sarcasm_level": 9}
+{"id": "network_04", "prompt": "Why is the firewall blocking my favorite torrent site?", "sarcasm_level": 7}
+{"id": "network_05", "prompt": "VPN won't connect. Is that normal?", "sarcasm_level": 5}
+{"id": "email_01", "prompt": "Where's the 'send' button in Outlook?", "sarcasm_level": 3}
+{"id": "email_02", "prompt": "I accidentally replied all to the entire company. Fix it.", "sarcasm_level": 6}
+{"id": "email_03", "prompt": "Outlook says I'm out of storage. Can you delete someone's mail instead?", "sarcasm_level": 8}
+{"id": "email_04", "prompt": "Why does spam keep showing up in my inbox?", "sarcasm_level": 4}
+{"id": "email_05", "prompt": "Can I CC my cat on emails?", "sarcasm_level": 9}
+{"id": "password_01", "prompt": "I forgot my password again.", "sarcasm_level": 5}
+{"id": "password_02", "prompt": "Why can't my password just be 'password'?", "sarcasm_level": 7}
+{"id": "password_03", "prompt": "I wrote my password on a sticky note. It's gone.", "sarcasm_level": 6}
+{"id": "password_04", "prompt": "How do I recover my password from memory loss?", "sarcasm_level": 8}
+{"id": "password_05", "prompt": "My hamster chewed up my 2FA code.", "sarcasm_level": 10}
+{"id": "updates_01", "prompt": "The system asked for an update. I clicked 'later'. Now it's broken.", "sarcasm_level": 6}
+{"id": "updates_02", "prompt": "Do I *have* to install updates?", "sarcasm_level": 5}
+{"id": "updates_03", "prompt": "I updated to Windows 95. Is that bad?", "sarcasm_level": 9}
+{"id": "updates_04", "prompt": "The update restarted my computer mid-email!", "sarcasm_level": 4}
+{"id": "updates_05", "prompt": "Can I install updates over dial-up?", "sarcasm_level": 8}
+{"id": "software_01", "prompt": "Can I install Chrome from this USB I found?", "sarcasm_level": 7}
+{"id": "software_02", "prompt": "My screen is upside-down. I blame PowerPoint.", "sarcasm_level": 5}
+{"id": "software_03", "prompt": "Why doesn't Excel understand art?", "sarcasm_level": 9}
+{"id": "software_04", "prompt": "I installed something from a banner ad. Now everything’s slow.", "sarcasm_level": 8}
+{"id": "software_05", "prompt": "What's this thing called Task Manager?", "sarcasm_level": 6}
+{"id": "hardware_01", "prompt": "The coffee tray won't eject anymore.", "sarcasm_level": 9}
+{"id": "hardware_02", "prompt": "My mouse won’t move. But I can shake it.", "sarcasm_level": 4}
+{"id": "hardware_03", "prompt": "I dropped my laptop. Can you fix the floor?", "sarcasm_level": 7}
+{"id": "hardware_04", "prompt": "Is the cup holder part of the CPU?", "sarcasm_level": 10}
+{"id": "hardware_05", "prompt": "My monitor smells funny after I microwaved soup near it.", "sarcasm_level": 10}
+{"id": "security_01", "prompt": "Is it bad if my browser toolbar says 'H@xx0rZ'?", "sarcasm_level": 8}
+{"id": "security_02", "prompt": "The antivirus blocked me. Am I the virus?", "sarcasm_level": 6}
+{"id": "security_03", "prompt": "I shared my login with a friend. Is that okay?", "sarcasm_level": 7}
+{"id": "security_04", "prompt": "Can you unblock the site that says 'Install now, free Bitcoin'?", "sarcasm_level": 9}
+{"id": "security_05", "prompt": "How do I disable all security warnings?", "sarcasm_level": 10}
+{"id": "misc_01", "prompt": "Can I run Crysis on the office firewall?", "sarcasm_level": 9}
+{"id": "misc_02", "prompt": "What’s the Wi-Fi password for the afterlife?", "sarcasm_level": 10}
+{"id": "misc_03", "prompt": "Can you teach Excel to love?", "sarcasm_level": 8}
+{"id": "misc_04", "prompt": "Why don’t our computers have floppy drives?", "sarcasm_level": 7}
+{"id": "misc_05", "prompt": "What’s the USB plug for? Coffee warmer?", "sarcasm_level": 6}
