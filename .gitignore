@@ -1,0 +1,10 @@
+.idea/
+.spyproject/
+__pycache__/
+checkpoints/
+hf_cache/
+merged_model_for_export/
+logs/
+redundant/
+models/
+gguf/
