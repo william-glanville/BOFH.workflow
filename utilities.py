@@ -1,7 +1,6 @@
 import unicodedata
 import platform
 from datetime import timedelta
-from tkinter import messagebox
 
 def format_eta(seconds):
     delta = timedelta(seconds=int(seconds))
@@ -27,9 +26,6 @@ def get_emoji_font() -> str:
         "Darwin": "Apple Color Emoji",
         "Linux": "Noto Color Emoji"
     }.get(platform.system(), "Segoe UI")
-
-def confirm_execution(title: str, message: str) -> bool:
-    return messagebox.askyesno(title, message)
 
 def safe_font_test(text_area):
     for font in ["Segoe UI Emoji", "Arial", "Noto Color Emoji", "Symbola"]:

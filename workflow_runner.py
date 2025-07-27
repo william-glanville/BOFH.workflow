@@ -1,7 +1,5 @@
 import time, shutil
 import tkinter.simpledialog as sd
-import telemetry
-from utilities import confirm_execution
 
 
 class WorkflowRunner:
@@ -23,20 +21,14 @@ class WorkflowRunner:
         return cmd
 
     def run_tracked_subprocess(self, command, description):
-        self.app.set_buttons_state("disabled")
-        self.app.cancel_button.config(state="normal")
-        self.app.progress_label.config(text=f"Running: {description}")
-
-        tracker = self.constants.ProgressTracker(
-            description, 0, 1, self.app.display, self.app.progress
-        )
+        self.app.set_workflow_active(True)
+        self.app.display("System", f"executing {description}")
 
         try:
             runner = self.constants.SimpleRunner(
                 command=command,
                 description=description,
                 display_fn=self.app.display,
-                tracker=tracker,
                 on_finish=self.on_finish,
             )
             self.active_runner = runner
@@ -52,25 +44,22 @@ class WorkflowRunner:
     def on_finish(self):
         self.app.display("SYSTEM","Task complete. Nothing crashed... surprisingly.")      
         self.cleanup()
-        self.app.generate_reports(self.last_task_name)
+        #self.app.generate_reports(self.last_task_name)
 
     def cleanup(self):
-        self.app.set_buttons_state("normal")
-        self.app.cancel_button.config(state="disabled")
-        self.app.progress_label.config(text="Idle")
+        self.app.set_workflow_active(False)
         self.active_runner = None
 
     def cancel_active_task(self):
         if self.active_runner:
-            self.active_runner.cancel()
-            self.active_runner = None
-            self.last_task_name = None
-            self.cleanup()
+            try:
+                self.active_runner.cancel()
+            finally:
+                self.active_runner = None
+                self.last_task_name = None
+                self.cleanup()
 
     def try_launch(self, name, command, description):
-        if not confirm_execution("Confirm Execution", f"Are you sure you want to run '{name}'?"):
-            self.app.display(telemetry.display("SYSTEM",f"[{name.upper()}] Launch canceled by user."))
-            return
         self.app.display("SYSTEM",f"[{name.upper()}] Launching subprocess...")
         self.run_tracked_subprocess(command, description)
 

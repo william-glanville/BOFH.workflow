@@ -1,6 +1,9 @@
 import socket
 import threading
 import json
+import time
+import copy
+import constants
 
 from memory_monitor import MemoryMonitor
 
@@ -33,9 +36,19 @@ REC_DISPLAY = {
         "message" : TAG_UNKNOWN,
     }
  }
+REC_MEMORY = {
+    "type": TYPE_MEMORY,
+    "data": {
+        "tag":"unknown",
+        "timestamp":0,
+        "value":0.0
+    }
+}
+
 REC_GPU_MEMORY = {
     "type": TYPE_MEMORY,
     "data": {
+        "timestamp":0,
         "gpu_allocated": 0,
         "gpu_reserved": 0,
         "ram_used": 0
@@ -81,10 +94,22 @@ class TelemetryTCPServer(threading.Thread):
         self.callback = callback  # GUI processor
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.online = REC_CONNECTION.copy()
-        self.online["data"]["state"] = "online"
-        self.offline = REC_CONNECTION.copy()
-        self.offline["data"]["state"] = "offline"
+        self.online = {
+            "type":TYPE_CONNECTION,
+            "data": {
+                'tag': TAG_STATUS, 
+                'state': 'online',
+                'error': 'none'
+            }
+        }
+        self.offline = {
+            "type":TYPE_CONNECTION,
+            "data": {
+                'tag': TAG_STATUS, 
+                'state': 'offline',
+                'error': 'none'
+            }
+        }
         
     def run(self):        
         self.sock.bind((self.host, self.port))
@@ -132,39 +157,49 @@ class SocketTelemetrySender:
         except Exception as e:
             print(f"[Telemetry Sender Failure] {e}")            
             
-    
-    def report_gpu_memory( self, tag ):
+    def report_gpu_memory( self ):
+        print("check memory")
         gpua, gpur, ram = self.memory.snapshot()
-        candidate = REC_GPU_MEMORY.copy()
-        candidate["data"]["tag"] = tag
-        candidate["data"]["gpu_allocated"] = gpua
-        candidate["data"]["gpu_reserved"] = gpur
-        candidate["data"]["ram_used"] = ram
+        candidate = copy.deepcopy(REC_MEMORY)
+        candidate["data"]["tag"] = constants.SERIES_GPUALLOCATED
+        candidate["data"]["timestamp"] = time.time()
+        candidate["data"]["value"] = gpua
         self.send(candidate)
-                
+        candidate = copy.deepcopy(REC_MEMORY)
+        candidate["data"]["tag"] = constants.SERIES_GPURESERVED
+        candidate["data"]["timestamp"] = time.time()
+        candidate["data"]["value"] = gpur
+        self.send(candidate)
+        candidate = copy.deepcopy(REC_MEMORY)
+        candidate["data"]["tag"] = constants.SERIES_RAMUSED
+        candidate["data"]["timestamp"] = time.time()
+        candidate["data"]["value"] = ram
+        self.send(candidate)
+        print("check memory done")
+        
     def report_progress(self,tag,current,total):
-        candidate = REC_PROGRESS.copy()
+        candidate = copy.deepcopy(REC_PROGRESS)
         candidate["data"]["tag"] = tag
         candidate["data"]["progress"] = current
         candidate["data"]["total"] = total
         self.send(candidate)
 
     def report_gradnorm(self, step, norm ):
-        candidate = REC_TRAINING.copy()
+        candidate = copy.deepcopy(REC_TRAINING)
         candidate["data"]["tag"] = TAG_GRADNORM
         candidate["data"]["step"] = step
         candidate["data"]["value"] = norm
         self.send(candidate)
         
     def report_loss(self, step, loss ):
-        candidate = REC_TRAINING.copy()
+        candidate = copy.deepcopy(REC_TRAINING)
         candidate["data"]["tag"] = TAG_LOSS
         candidate["data"]["step"] = step
         candidate["data"]["value"] = loss
         self.send(candidate)
         
     def report_learningrate(self, step, rate ):
-        candidate = REC_TRAINING.copy()
+        candidate = copy.deepcopy(REC_TRAINING)
         candidate["data"]["tag"] = TAG_LR
         candidate["data"]["step"] = step
         candidate["data"]["value"] = rate

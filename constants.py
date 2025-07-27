@@ -1,4 +1,3 @@
-import time
 import subprocess
 import threading
 import signal
@@ -48,6 +47,7 @@ MODEL_TEXT_CLASSIFICATION ="ynie/roberta-large_conv_contradiction_detector_v0"
 PROMPT_TONE_ANALYSIS = "tone_analysis_prompt.txt"
 PROMPT_TONE_REPAIR = "tone_json_repair_prompt.txt"
 
+DIR_FONTS = f"{ROOT}/fonts"
 DIR_COMMON = f"{ROOT}/common"
 DIR_DATA = f"{ROOT}/data"
 DIR_PROMPTS = f"{ROOT}/prompts"
@@ -84,12 +84,24 @@ LABEL_QUANTIZATION = "Quantization"
 LABEL_CHAT = "Chat"
 LABEL_EVALUATION = "Evaluation"
 
-GUI_MAX_DIVS = 1000
+SERIES_LOSS = "Loss"
+SERIES_GRADNORM = "GradNorm"
+SERIES_LEARNINGRATE = "LearningRate"
+SERIES_GPUALLOCATED = "GPUAllocated"
+SERIES_GPURESERVED = "GPUReserved"
+SERIES_RAMUSED = "RAMUsed"
+
+SERIES_STEPS = [ SERIES_LOSS,SERIES_GRADNORM,SERIES_LEARNINGRATE ]
+SERIES_TIME = [ SERIES_GPUALLOCATED,SERIES_GPURESERVED,SERIES_RAMUSED ]
+            
 
 if os.name == "nt":
     CREATION_FLAGS = subprocess.CREATE_NEW_PROCESS_GROUP
 else:
     PRE_EXEC_FN = os.setsid
+
+def get_font_path(filename):
+    return f"{DIR_FONTS}/{filename}"
 
 def get_Llama_cpp_path(filename):
     return f"{DIR_LLAMA_CPP}/{filename}"
@@ -161,61 +173,12 @@ def load_text_file(candidate: str) -> str:
 
     return text
 
-class ProgressTracker:
-    def __init__(self, description="Progress", minimum=0, maximum=100, display_fn=print, progressbar=None):
-        self.description = description
-        self.minimum = minimum
-        self.maximum = maximum
-        self.current = minimum
-        self.timestamps = []
-        self.start_time = time.time()
-        self.display_fn = display_fn
-        self.progressbar = progressbar
-
-    def update(self, value):
-        now = time.time()
-        self.current = value
-        self.timestamps.append((now, value))
-        if len(self.timestamps) > 10:
-            self.timestamps.pop(0)
-
-        percent = 100 * (self.current - self.minimum) / (self.maximum - self.minimum)
-        if self.progressbar:
-            self.progressbar["value"] = percent
-        self._display_progress(self._calculate_eta())
-
-    def _calculate_eta(self):
-        if len(self.timestamps) < 2:
-            return None
-        t0, v0 = self.timestamps[0]
-        t1, v1 = self.timestamps[-1]
-        if v1 == v0:
-            return None
-        rate = (v1 - v0) / (t1 - t0)
-        remaining = self.maximum - self.current
-        return remaining / rate if rate > 0 else None
-
-    def _display_progress(self, eta):
-        percent = 100 * (self.current - self.minimum) / (self.maximum - self.minimum)
-        bar = "|" * int(percent / 5) + "-" * (20 - int(percent / 5))
-
-        elapsed = time.time() - self.start_time
-        eta_str = self._format_time(eta) if eta else "Calculating..."
-        elapsed_str = self._format_time(elapsed)
-
-        self.display_fn( "ProgressTracker", f"{self.description}: [{bar}] {percent:.1f}% | Elapsed: {elapsed_str} | ETA: {eta_str}")
-
-    def _format_time(self, seconds):
-        minutes, sec = divmod(int(seconds), 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"{hours}h {minutes}m {sec}s" if hours else f"{minutes}m {sec}s" if minutes else f"{sec}s"
 
 class SimpleRunner:
-    def __init__(self, command, description, display_fn, tracker, on_finish):
+    def __init__(self, command, description, display_fn, on_finish):
         self.command = command
         self.description = description
         self.display_fn = display_fn
-        self.tracker = tracker
         self.on_finish = on_finish
         self.proc = None
         self.thread = threading.Thread(target=self._run, daemon=True)

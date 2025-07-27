@@ -45,7 +45,7 @@ class BOFHTrainer:
         
     def setup(self):
         try:
-            self.monitor.report_gpu_memory( "Training" )
+            self.monitor.report_gpu_memory()
             self.monitor.display("Training", "Loading model and tokenizer...")
             self.monitor.display("Training", "Model Retriever Setup")
             self.modelloader.retrieve()
@@ -119,12 +119,12 @@ class BOFHTrainer:
         else:
             self.monitor.display( "Training", "No checkpoint found — starting from scratch.")
         
-        self.monitor.report_gpu_memory("Training")
+        self.monitor.report_gpu_memory()
 
 
     def train(self):
         self.start_time = time.time()
-        self.monitor.report_gpu_memory("Training")
+        self.monitor.report_gpu_memory()
         self.monitor.display( "Training", "Beginning training...")
 
         self.model.train()

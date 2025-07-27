@@ -1,82 +1,96 @@
 import os
-import logging
 import json
-import constants
+import logging
 import torch
-from datasets import load_from_disk
+import webview
 from collections import Counter
-from TokenizationReport import generate_tokenization_report  # if separate
+from datasets import load_from_disk
+from reporting import ReportRenderer
 from telemetry import SocketTelemetrySender
-from memory_monitor import MemoryMonitor
+import constants
 
-telemetry = SocketTelemetrySender()
-memory = MemoryMonitor()
+class CorpusValidator:
+    def __init__(self):
+        self.telemetry = SocketTelemetrySender()
+        self.corpus_path = constants.DIR_TRAINING_CORPUS
+        self.log_path = constants.get_log_path("validate_corpus.log")
+        self.summary_path = constants.get_log_path("validate_corpus.summary.json")
 
-TRAINING_CORPUS_PATH = constants.DIR_TRAINING_CORPUS
-LOG_PATH = constants.get_log_path("validate_corpus.log")
-SUMMARY_PATH = constants.get_log_path("validate_corpus.summary.json")
+        logging.basicConfig(
+            filename=self.log_path,
+            level=logging.INFO,
+            format="%(asctime)s - %(levelname)s - %(message)s"
+        )
 
-logging.basicConfig(
-    filename=LOG_PATH,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+    def validate(self, dataset):
+        lengths, mismatch_count = [], 0
+        sarcasm_freq = Counter()
+        tone_seq_lengths = Counter()
+        total = len(dataset)
 
-def validate(dataset):
-    lengths = []
-    mismatch_count = 0
-    sarcasm_freq = Counter()
-    tone_seq_lengths = Counter()
-    
-    rec_count = len(dataset)
-    
-    for i, item in enumerate(dataset):        
-        if telemetry and i%10==0:
-            telemetry.report_progress("Validation", i, rec_count )
-        # Ensure tensors are on CPU and properly cast
-        input_ids = item["input_ids"].cpu() if isinstance(item["input_ids"], torch.Tensor) else torch.tensor(item["input_ids"])
-        labels    = item["labels"].cpu()    if isinstance(item["labels"], torch.Tensor)    else torch.tensor(item["labels"])
+        for i, item in enumerate(dataset):
+            if self.telemetry and i % 10 == 0:
+                self.telemetry.report_progress("Validation", i, total)
 
-        if input_ids.size(0) != labels.size(0):
-            mismatch_count += 1
-            logging.warning(f"[Mismatch @ {i}] input_ids: {input_ids.size(0)} vs labels: {labels.size(0)}")
-            continue
+            input_ids = item["input_ids"].cpu() if isinstance(item["input_ids"], torch.Tensor) else torch.tensor(item["input_ids"])
+            labels = item["labels"].cpu() if isinstance(item["labels"], torch.Tensor) else torch.tensor(item["labels"])
 
-        lengths.append(input_ids.size(0))
+            if input_ids.size(0) != labels.size(0):
+                mismatch_count += 1
+                logging.warning(f"[Mismatch @ {i}] input_ids: {input_ids.size(0)} vs labels: {labels.size(0)}")
+                continue
 
-        # Slice tone label section
-        mask_indices = (labels == -100).nonzero(as_tuple=True)[0]
-        tone_section = labels[mask_indices[-1]+1:] if len(mask_indices) > 0 else labels
-        tone_seq_lengths[tone_section.size(0)] += 1
+            lengths.append(input_ids.size(0))
+            mask_indices = (labels == -100).nonzero(as_tuple=True)[0]
+            tone_section = labels[mask_indices[-1]+1:] if len(mask_indices) > 0 else labels
+            tone_seq_lengths[tone_section.size(0)] += 1
 
-        if tone_section.numel() > 0:
-            sarcasm_token = tone_section[-1].item()
-            sarcasm_freq[sarcasm_token] += 1
+            if tone_section.numel() > 0:
+                sarcasm_token = tone_section[-1].item()
+                sarcasm_freq[sarcasm_token] += 1
 
-    # Stats block
-    stats = {
-        "total_samples": len(dataset),
-        "avg_input_length": round(sum(lengths)/len(lengths), 2) if lengths else 0,
-        "label_mismatches": mismatch_count,
-        "sarcasm_token_distribution": dict(sarcasm_freq),
-        "tone_sequence_lengths": dict(tone_seq_lengths)
-    }
+        stats = {
+            "total_samples": total,
+            "avg_input_length": round(sum(lengths) / len(lengths), 2) if lengths else 0,
+            "label_mismatches": mismatch_count,
+            "sarcasm_token_distribution": dict(sarcasm_freq),
+            "tone_sequence_lengths": dict(tone_seq_lengths)
+        }
 
-    with open(SUMMARY_PATH, "w", encoding="utf-8") as fout:
-        json.dump(stats, fout, indent=2)
-    logging.info(f"✅ Validation complete. Summary written to: {SUMMARY_PATH}")
+        with open(self.summary_path, "w", encoding="utf-8") as fout:
+            json.dump(stats, fout, indent=2)
 
-def main():
-    if not os.path.exists(TRAINING_CORPUS_PATH):
-        telemetry.display("Validation", f"❌ Corpus not found: {TRAINING_CORPUS_PATH}")
-        return
-    try:
-        dataset = load_from_disk(TRAINING_CORPUS_PATH)
-        validate(dataset)
-        generate_tokenization_report()
-    except Exception as e:
-        telemetry.display("Validation",f"🚨 Validation error: {e}")
-        logging.error(f"Validation failure: {e}")
+        self.telemetry.display("Validation", f"Validation complete. Summary written to: {self.summary_path}")
+        self.telemetry.display("Validation", "Generating report")
+
+    def generate_tokenization_report(self):
+        path = constants.get_log_path(constants.DS_TOKENIZATION_REPORT)
+        if not os.path.exists(path):
+            self.telemetry.display("Validation", "Tokenization Report not found.")
+            return
+
+        with open(path, encoding="utf-8") as file:
+            content = file.read()
+        template_path = constants.get_misc_path(constants.DS_TOKENIZATION_REPORT_TEMPLATE)
+        html = ReportRenderer(template_path).render(content)
+        self.launch_report("Tokenization Report", html)
+
+    def launch_report(self, title, html, width=1000, height=800):
+        window = webview.create_window(title, html=html, width=width, height=height)
+        webview.start()
+
+    def run(self):
+        if not os.path.exists(self.corpus_path):
+            self.telemetry.display("Validation", f"Corpus not found: {self.corpus_path}")
+            return
+
+        try:
+            dataset = load_from_disk(self.corpus_path)
+            self.validate(dataset)
+            self.generate_tokenization_report()
+        except Exception as e:
+            self.telemetry.display("Validation", f"Validation error: {e}")
+            logging.error(f"Validation failure: {e}")
 
 if __name__ == "__main__":
-    main()
+    CorpusValidator().run()
