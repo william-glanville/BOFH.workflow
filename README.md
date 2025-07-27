@@ -1,4 +1,3 @@
-```markdown
 # 🖥️ BOFH Workflow Companion
 
 A sarcastically sentient AI training pipeline & telemetry-powered GUI for debugging, diagnostics, and delightfully hostile automation.
@@ -68,4 +67,3 @@ To improve your startup time — but not your personality. <|eos|>
 ---
 
 Built to make AI training as expressive, insightful, and sarcastically aware as your favorite sysadmin. 💾💣
-```
