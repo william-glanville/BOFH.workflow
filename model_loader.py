@@ -1,6 +1,8 @@
 import torch
 import chardet
 import json
+import torch.nn as nn
+
 
 from telemetry import TelemetryProxy
 from collections import defaultdict
@@ -54,7 +56,7 @@ class ModelRetriever:
 
         # Model
         self.monitor.display("ModelRetriever", "Downloading model weights...")        
-        self.model = CausalLMWithCheckpointing.from_pretrained(
+        self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id,
             token=HF_USER_TOKEN,
             torch_dtype=self.dtype,
@@ -202,37 +204,3 @@ class ModelRetriever:
         else:
             self.monitor.display("Model LoRA report", "Model {self.model_id} not loaded")
 
-class CausalLMWithCheckpointing(MistralForCausalLM):
-    def __init__(self, config, use_checkpoint=True, **kwargs):
-        super().__init__(config)
-        self.use_checkpoint = use_checkpoint
-        
-    @classmethod
-    def from_pretrained(cls, model_id, **kwargs):
-        config = AutoConfig.from_pretrained(model_id, token=kwargs.get("token"))
-        use_checkpoint = kwargs.pop("use_checkpoint", True)
-        base_model = MistralForCausalLM.from_pretrained(model_id, config=config, **kwargs)
-    
-        model = cls(config=config, use_checkpoint=use_checkpoint)
-        model.load_state_dict(base_model.state_dict())
-    
-        return model
-
-
-    def forward(self, input_ids=None, attention_mask=None, **kwargs):
-        # Get embeddings
-        inputs_embeds = self.transformer.wte(input_ids)
-        hidden_states = inputs_embeds
-
-        # Apply transformer blocks
-        for block in self.transformer.h:
-            if self.use_checkpoint:
-                hidden_states = checkpoint(block, hidden_states, attention_mask)
-            else:
-                hidden_states = block(hidden_states, attention_mask)[0]
-
-        # Final layer norm + LM head
-        hidden_states = self.transformer.ln_f(hidden_states)
-        logits = self.lm_head(hidden_states)
-
-        return {"logits": logits}

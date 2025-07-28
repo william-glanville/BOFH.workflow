@@ -12,7 +12,7 @@ from typing import Dict
 TELEMETRY_MODE_NETWORK = "network"
 TELEMETRY_MODE_CONSOLE = "console"
 
-TELEMETRY_MODE = TELEMETRY_MODE_CONSOLE
+TELEMETRY_MODE = TELEMETRY_MODE_NETWORK
 
 TYPE_MEMORY = "memory"
 TYPE_PROGRESS = "progress"
@@ -262,13 +262,13 @@ class SocketTelemetrySender(TelemetryInterface):
         self.send(packet)
 
     def report_gradnorm(self, step: int, norm: float) -> None:
-        self._send_training(TAG_GRADNORM, step, norm)
+        self._send_training(constants.SERIES_GRADNORM, step, norm)
 
     def report_loss(self, step: int, loss: float) -> None:
-        self._send_training(TAG_LOSS, step, loss)
+        self._send_training(constants.SERIES_LOSS, step, loss)
 
     def report_learningrate(self, step: int, lr: float) -> None:
-        self._send_training(TAG_LR, step, lr)
+        self._send_training(constants.SERIES_LEARNINGRATE, step, lr)
 
     def _send_training(self, tag: str, step: int, value: float) -> None:
         packet = copy.deepcopy(REC_TRAINING)

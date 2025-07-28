@@ -15,8 +15,6 @@ from workflow_runner import WorkflowRunner
 
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-telemetry.TELEMETRY_MODE = telemetry.TELEMETRY_MODE_NETWORK
-
 BUTTON_WIDTH = 180
 
 class BOFHDashboard:
@@ -117,6 +115,9 @@ class BOFHDashboard:
         else:
             self._log(f"No telemetry handling for type {packet.get('type')}")
 
+    def _on_training_telemetry(self, data:dict):
+        self.display_panel.graph_panel().updateData( data )
+         
     def _update_memory(self,data:dict):
         self.display_panel.graph_panel().updateData( data )
         

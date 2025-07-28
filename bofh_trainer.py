@@ -131,36 +131,43 @@ class BOFHTrainer:
         for epoch in range(self.start_epoch, self.config.num_epochs):
             self.monitor.display( "Training", "Step 2")
             for step, batch in enumerate(self.dataloader):
-                #self.monitor.display( "Training", "Step 3")
+                batch = {k: v.to("cuda") for k, v in batch.items()}
+                # for key in batch:
+                #     self.monitor.display("Training", f"{key}: {type(batch[key])}, shape: {batch[key].shape}")
+                # for k, v in batch.items():
+                #     self.monitor.display("Training", f"{k}: device = {v.device}")
+                # for k, v in batch.items():
+                #     self.monitor.display("Training", f"{k}: dtype = {v.dtype}")
+
+                self.monitor.display( "Training", "Step 3")
                 global_step = epoch * len(self.dataloader) + step
                 with self.accelerator.accumulate(self.model):
-                    #self.monitor.display( "Training", f"Step 4.0 - Batch Keys {batch.keys()}")
+                    self.monitor.display( "Training", f"Step 4.0 - Batch Keys {batch.keys()}")
                     outputs = self.model(**batch)
-                    #self.monitor.display( "Training", f"Step 4.1 - Outputs.loss {outputs.loss}")
+                    self.monitor.display( "Training", f"Step 4.1 - Outputs.loss {outputs.loss}")
                     loss = outputs.loss / self.config.accum_steps
                     
-                    #self.monitor.display( "Training", f"Step 4.2, loss = {loss}")
+                    self.monitor.display( "Training", f"Step 4.2, loss = {loss}")
                     self.accelerator.backward(loss)                    
-                    #self.monitor.display( "Training", "Step 5")
+                    self.monitor.display( "Training", "Step 5")
                     if self.accelerator.sync_gradients:
-                        #self.monitor.display( "Training", "Step 5.1")
+                        self.monitor.display( "Training", "Step 5.1")
                         # Clip gradients and get their norm
                         grad_norm = torch.nn.utils.clip_grad_norm_( self.model.parameters(), max_norm=1.0 )
                         self.monitor.report_gradnorm(global_step, grad_norm)
-                        #self.monitor.display( "Training", "Step 5.2")
+                        self.monitor.display( "Training", "Step 5.2")
                         self.optimizer.step()
                         # Log the current learning rate
                         current_lr = self.optimizer.param_groups[0]['lr']
-                        #self.monitor.display( "Training", "Step 5.3")
+                        self.monitor.display( "Training", "Step 5.3")
                         self.monitor.report_learningrate(global_step, current_lr)        
                         self.scheduler.step()
-                        #self.monitor.display( "Training", "Step 5.4")
+                        self.monitor.display( "Training", "Step 5.4")
                         self.optimizer.zero_grad()
-                        #self.monitor.display( "Training", "Step 5.5")
+                        self.monitor.display( "Training", "Step 5.5")
 
                 try:
-                    #self.monitor.display( "Training", "Step 5.6")
-                    # Send raw loss, lr, grad_norm every 10 steps
+                    self.monitor.display( "Training", "Step 5.6")                    
                     self.monitor.report_progress( "Training", global_step, self.total_steps)
                     self.monitor.report_loss( global_step, loss )
                     self.log_step( epoch, step, loss, global_step )
