@@ -4,14 +4,14 @@ import constants
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from checkpointing import find_latest_checkpoint
-from telemetry import SocketTelemetrySender
+from telemetry import TelemetryProxy
 from TrainingConfig import QuantizationConfig
 
 
 class ModelQuantizer:
     def __init__(self, config: QuantizationConfig):
         self.cfg = config
-        self.telemetry = SocketTelemetrySender()
+        self.telemetry = TelemetryProxy()
         os.makedirs(self.cfg.output_dir, exist_ok=True)
 
     def get_file_size_mb(self, path):

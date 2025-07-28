@@ -3,7 +3,7 @@ import re
 import string
 import logging
 import json
-
+import constants
 from collections import defaultdict
 from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassification
 
@@ -21,7 +21,7 @@ ner_pipeline = pipeline("ner", model=model, tokenizer=tokenizer)
 speaker_memory = defaultdict(int)
 last_speaker = None  # Store the last identified speaker
 previous_speaker = None  # Store the speaker before last
-narrator = Constants.NARRATOR  # Global default narrator
+narrator = constants.NARRATOR  # Global default narrator
 flashback_mode = False  # Track the flashback state
 question_followed = False  # Track if a question was followed by another question
 

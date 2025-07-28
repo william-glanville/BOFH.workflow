@@ -8,7 +8,7 @@ import TrainingConfig
 import model_loader
 from model_loader import ModelRetriever
 from datasets import Dataset, Features, Value, List
-from telemetry import SocketTelemetrySender, ConsoleTelemetrySender
+from telemetry import TelemetryProxy
 
 datasets.disable_progress_bar()
 datasets.disable_caching()
@@ -32,8 +32,7 @@ class CorpusBuilder:
         self.tokenizer = None
         self.corpus_path = corpus_path
         self.output_path = output_path
-        self.monitor = SocketTelemetrySender() 
-        #self.monitor = ConsoleTelemetrySender() 
+        self.monitor = TelemetryProxy() 
         self.modelloader = ModelRetriever( model_loader.MODEL_NAME, constants.TONAL_TOKENS )        
         self.monitor.display("Corpus Builder", "Started")
 

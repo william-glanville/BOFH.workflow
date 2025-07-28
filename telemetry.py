@@ -6,7 +6,13 @@ import copy
 import constants
 
 from memory_monitor import MemoryMonitor
+from abc import ABC, abstractmethod
+from typing import Dict
 
+TELEMETRY_MODE_NETWORK = "network"
+TELEMETRY_MODE_CONSOLE = "console"
+
+TELEMETRY_MODE = TELEMETRY_MODE_CONSOLE
 
 TYPE_MEMORY = "memory"
 TYPE_PROGRESS = "progress"
@@ -143,122 +149,183 @@ class TelemetryTCPServer(threading.Thread):
                 self.callback(self.offline)
             conn.close()
             
+            
+            
+class TelemetryInterface(ABC):
+    @abstractmethod
+    def report_loss(self, step: int, loss: float) -> None: pass
 
-class SocketTelemetrySender:
+    @abstractmethod
+    def report_progress(self, tag: str, step: int, total_steps: int) -> None: pass
+
+    @abstractmethod
+    def report_gradnorm(self, step: int, norm: float) -> None: pass
+
+    @abstractmethod
+    def report_learningrate(self, step: int, lr: float) -> None: pass
+
+    @abstractmethod
+    def report_gpu_memory(self) -> None: pass
+
+    @abstractmethod
+    def display(self, source: str, message: str) -> None: pass
+
+    @abstractmethod
+    def display_dict(self, source: str, data: Dict) -> None: pass
+
+    @abstractmethod
+    def send(self, packet: dict) -> None: pass
+
+
+class TelemetryProxy(TelemetryInterface):
+    def __init__(self, mode: str = TELEMETRY_MODE, host: str = HOST, port: int = PORT):
+        self.host = host
+        self.port = port
+        self.mode = mode
+        self.sender: TelemetryInterface = self._resolve_sender(mode)
+
+    def _resolve_sender(self, mode: str) -> TelemetryInterface:
+        if mode == TELEMETRY_MODE_NETWORK:
+            return SocketTelemetrySender(self.host, self.port)
+        else:
+            return ConsoleTelemetrySender()
+
+    def set_mode(self, new_mode: str) -> None:
+        if new_mode == self.mode:
+            print(f"[TelemetryProxy] Already in mode: {new_mode}")
+            return
+        print(f"[TelemetryProxy] Switching to mode: {new_mode}")
+        self.mode = new_mode
+        self.sender = self._resolve_sender(new_mode)
+
+    def send(self, packet: dict) -> None:
+        self.sender.send( packet )
+        
+    def report_loss(self, step: int, loss: float) -> None:
+        self.sender.report_loss(step, loss)
+
+    def report_progress(self, tag: str, step: int, total_steps: int) -> None:
+        self.sender.report_progress(tag, step, total_steps)
+
+    def report_gradnorm(self, step: int, norm: float) -> None:
+        self.sender.report_gradnorm(step, norm)
+
+    def report_learningrate(self, step: int, lr: float) -> None:
+        self.sender.report_learningrate(step, lr)
+
+    def report_gpu_memory(self) -> None:
+        self.sender.report_gpu_memory()
+
+    def display(self, source: str, message: str) -> None:
+        self.sender.display(source, message)
+
+    def display_dict(self, source: str, data: Dict) -> None:
+        self.sender.display_dict(source, data)
+    
+
+    
+class SocketTelemetrySender(TelemetryInterface):
     def __init__(self, host=HOST, port=PORT):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, port))        
         self.memory = MemoryMonitor()
-        
-    def send(self, packet: dict):
+
+    def send(self, packet: dict) -> None:
         try:
             msg = json.dumps(packet).encode() + b"\n"
             self.sock.sendall(msg)
         except Exception as e:
-            print(f"[Telemetry Sender Failure] {e}")            
-            
-    def report_gpu_memory( self ):
-        print("check memory")
-        gpua, gpur, ram = self.memory.snapshot()
-        candidate = copy.deepcopy(REC_MEMORY)
-        candidate["data"]["tag"] = constants.SERIES_GPUALLOCATED
-        candidate["data"]["timestamp"] = time.time()
-        candidate["data"]["value"] = gpua
-        self.send(candidate)
-        candidate = copy.deepcopy(REC_MEMORY)
-        candidate["data"]["tag"] = constants.SERIES_GPURESERVED
-        candidate["data"]["timestamp"] = time.time()
-        candidate["data"]["value"] = gpur
-        self.send(candidate)
-        candidate = copy.deepcopy(REC_MEMORY)
-        candidate["data"]["tag"] = constants.SERIES_RAMUSED
-        candidate["data"]["timestamp"] = time.time()
-        candidate["data"]["value"] = ram
-        self.send(candidate)
-        print("check memory done")
-        
-    def report_progress(self,tag,current,total):
-        candidate = copy.deepcopy(REC_PROGRESS)
-        candidate["data"]["tag"] = tag
-        candidate["data"]["progress"] = current
-        candidate["data"]["total"] = total
-        self.send(candidate)
+            print(f"[SocketTelemetrySender Error] {e}")
 
-    def report_gradnorm(self, step, norm ):
-        candidate = copy.deepcopy(REC_TRAINING)
-        candidate["data"]["tag"] = TAG_GRADNORM
-        candidate["data"]["step"] = step
-        candidate["data"]["value"] = norm
-        self.send(candidate)
+    def report_gpu_memory(self) -> None:
+        gpua, gpur, ram = self.memory.snapshot()
+        for tag, value in {
+            constants.SERIES_GPUALLOCATED: gpua,
+            constants.SERIES_GPURESERVED: gpur,
+            constants.SERIES_RAMUSED: ram
+        }.items():
+            packet = copy.deepcopy(REC_MEMORY)
+            packet["data"].update({
+                "tag": tag,
+                "timestamp": time.time(),
+                "value": value
+            })
+            self.send(packet)
+
+    def report_progress(self, tag: str, step: int, total_steps: int) -> None:
+        packet = copy.deepcopy(REC_PROGRESS)
+        packet["data"].update({
+            "tag": tag,
+            "progress": step,
+            "total": total_steps
+        })
+        self.send(packet)
+
+    def report_gradnorm(self, step: int, norm: float) -> None:
+        self._send_training(TAG_GRADNORM, step, norm)
+
+    def report_loss(self, step: int, loss: float) -> None:
+        self._send_training(TAG_LOSS, step, loss)
+
+    def report_learningrate(self, step: int, lr: float) -> None:
+        self._send_training(TAG_LR, step, lr)
+
+    def _send_training(self, tag: str, step: int, value: float) -> None:
+        packet = copy.deepcopy(REC_TRAINING)
+        packet["data"].update({
+            "tag": tag,
+            "step": step,
+            "value": value
+        })
+        self.send(packet)
+
+    def display(self, source: str, message: str) -> None:
+        packet = copy.deepcopy(REC_DISPLAY)
+        packet["data"].update({"tag": source, "message": message})
+        self.send(packet)
+
+    def display_dict(self, source: str, data: dict) -> None:
+        packet = copy.deepcopy(REC_DISPLAY)
+        packet["data"].update({"tag": source, **data})
+        self.send(packet)
         
-    def report_loss(self, step, loss ):
-        candidate = copy.deepcopy(REC_TRAINING)
-        candidate["data"]["tag"] = TAG_LOSS
-        candidate["data"]["step"] = step
-        candidate["data"]["value"] = loss
-        self.send(candidate)
         
-    def report_learningrate(self, step, rate ):
-        candidate = copy.deepcopy(REC_TRAINING)
-        candidate["data"]["tag"] = TAG_LR
-        candidate["data"]["step"] = step
-        candidate["data"]["value"] = rate
-        self.send(candidate)
-        
-    def display( self, tag, message ):
-        candidate = {
-            "type": TYPE_DISPLAY,
-            "data": {
-                "tag" : tag,
-                "message" : message,
-            }
-         }
-        self.send(candidate)
-        
-    def display_dict( self, tag, message:dict ):
-        candidate = {
-            "type": TYPE_DISPLAY,
-            "data": {
-                "tag" : tag
-            }
-         }
-        candidate["data"].update(message)
-        self.send(candidate)        
-        
-        
-class ConsoleTelemetrySender:
+class ConsoleTelemetrySender(TelemetryInterface):
     def __init__(self):
         pass  # No connection setup needed
 
-    def display(self, source, message):
-        print(f"[{source}] {message}")
-
-    def display_dict(self, source, data: dict):
-        print(f"[{source}] Dictionary Report:")
-        for key, value in data.items():
-            print(f"  {key}: {value}")
-
-    def report_loss(self, step, loss):
+    def send(self,packet:dict) -> None:
+        print(f"Raw Packet : {packet}")
+        
+    def report_loss(self, step: int, loss: float) -> None:
         print(f"[Telemetry] Step {step} | Loss: {loss:.4f}")
 
-    def report_progress(self, step, total_steps):
+    def report_progress(self, tag: str, step: int, total_steps: int) -> None:
         percent = (step / total_steps) * 100
         print(f"[Progress] Step {step}/{total_steps} ({percent:.2f}%)")
 
-    def report_gradnorm(self, step, norm):
+    def report_gradnorm(self, step: int, norm: float) -> None:
         print(f"[GradNorm] Step {step} | Norm: {norm:.4f}")
 
-    def report_learningrate(self, step, lr):
+    def report_learningrate(self, step: int, lr: float) -> None:
         print(f"[LearningRate] Step {step} | LR: {lr:.6f}")
 
-    def report_gpu_memory(self, label="Telemetry"):
+    def report_gpu_memory(self) -> None:
         import torch
         if torch.cuda.is_available():
             mem = torch.cuda.memory_allocated() / 1024**2
             max_mem = torch.cuda.max_memory_allocated() / 1024**2
-            print(f"[{label}] GPU Memory: {mem:.2f}MB / Max: {max_mem:.2f}MB")
+            print(f"[Console] GPU Memory: {mem:.2f}MB / Max: {max_mem:.2f}MB")
         else:
-            print(f"[{label}] GPU not available.")
+            print("[Console] GPU not available.")
+
+    def display(self, source: str, message: str) -> None:
+        print(f"[{source}] {message}")
+
+    def display_dict(self, source: str, data: dict) -> None:
+        print(f"[{source}] Dictionary Report:")
+        for key, value in data.items():
+            print(f"  {key}: {value}")
 
     def __call__(self):
         print("[Telemetry] __call__ triggered — likely heartbeat or silent ping.")        

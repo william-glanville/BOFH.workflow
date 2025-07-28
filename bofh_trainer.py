@@ -13,7 +13,7 @@ import model_loader
 import multiprocessing
 
 from checkpointing import find_latest_checkpoint, load_checkpoint, save_checkpoint
-from telemetry import SocketTelemetrySender, ConsoleTelemetrySender
+from telemetry import TelemetryProxy
 from model_loader import ModelRetriever
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
@@ -26,6 +26,7 @@ logging.basicConfig(
 class BOFHTrainer:
     def __init__(self, config: TrainingConfig.TrainerConfig):
         self.config = config
+        os.makedirs(self.config.checkpoint_dir, exist_ok=True)
         self.model = None
         self.tokenizer = None
         self.data_collator = None
@@ -36,10 +37,8 @@ class BOFHTrainer:
         self.accelerator = None
         self.total_steps = None
         self.start_epoch = 0
-        self.monitor = SocketTelemetrySender()
-        #self.monitor = ConsoleTelemetrySender()        
-        self.modelloader = ModelRetriever( model_loader.MODEL_NAME, constants.TONAL_TOKENS )
-        os.makedirs(self.config.checkpoint_dir, exist_ok=True)
+        self.monitor = TelemetryProxy()        
+        self.modelloader = ModelRetriever( model_loader.MODEL_NAME, constants.TONAL_TOKENS )        
         self.num_workers = multiprocessing.cpu_count() // 2
         self.start_time = time.time()
         
@@ -120,7 +119,6 @@ class BOFHTrainer:
             self.monitor.display( "Training", "No checkpoint found — starting from scratch.")
         
         self.monitor.report_gpu_memory()
-
 
     def train(self):
         self.start_time = time.time()
@@ -205,6 +203,5 @@ class BOFHTrainer:
         elapsed = time.time() - self.start_time
         eta = utils.format_eta((self.total_steps - global_step - 1) * (elapsed / (global_step + 1)))
         self.monitor.display( "Training", f"[Epoch {epoch}] Step {step} | Loss: {loss:.4f} | {percent:.2f}% | ETA: {eta}")
-        
         
         

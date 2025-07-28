@@ -6,12 +6,12 @@ import webview
 from collections import Counter
 from datasets import load_from_disk
 from reporting import ReportRenderer
-from telemetry import SocketTelemetrySender
+from telemetry import TelemetryProxy
 import constants
 
 class CorpusValidator:
     def __init__(self):
-        self.telemetry = SocketTelemetrySender()
+        self.telemetry = TelemetryProxy()
         self.corpus_path = constants.DIR_TRAINING_CORPUS
         self.log_path = constants.get_log_path("validate_corpus.log")
         self.summary_path = constants.get_log_path("validate_corpus.summary.json")

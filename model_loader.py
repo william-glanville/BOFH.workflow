@@ -2,12 +2,16 @@ import torch
 import chardet
 import json
 
-from telemetry import SocketTelemetrySender, ConsoleTelemetrySender
+from telemetry import TelemetryProxy
 from collections import defaultdict
+from torch.utils.checkpoint import checkpoint
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
-    DataCollatorWithPadding
+    DataCollatorWithPadding,
+    AutoConfig,
+    MistralConfig, 
+    MistralForCausalLM
 )
 
 
@@ -15,16 +19,16 @@ HF_USER_TOKEN = "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"
 MODEL_NAME = "NousResearch/Nous-Hermes-2-Mistral-7B-DPO"
 
 class ModelRetriever:
-    def __init__(self, model_id, tonal_tokens=None, corpus_path=None, dtype=torch.bfloat16):
+    def __init__(self, model_id, use_checkpoint=True, tonal_tokens=None, corpus_path=None, dtype=torch.bfloat16):
         self.model_id = model_id
+        self.use_checkpoint = use_checkpoint
         self.tonal_tokens = tonal_tokens or []
         self.corpus_path = corpus_path
         self.dtype = dtype
         self.model = None
         self.tokenizer = None
         self.data_collator = None
-        self.monitor = SocketTelemetrySender()
-        #self.monitor = ConsoleTelemetrySender()
+        self.monitor = TelemetryProxy()
         self.seed_map = {
             "<s_tone>": ["sarcasm", "tone", "style", "attitude"],
             "</s_tone>": ["tone"],
@@ -49,10 +53,10 @@ class ModelRetriever:
         self.monitor.display("ModelRetriever", "Tokenizer loaded and extended.")
 
         # Model
-        self.monitor.display("ModelRetriever", "Downloading model weights...")
-        self.model = AutoModelForCausalLM.from_pretrained(
+        self.monitor.display("ModelRetriever", "Downloading model weights...")        
+        self.model = CausalLMWithCheckpointing.from_pretrained(
             self.model_id,
-            token = HF_USER_TOKEN,
+            token=HF_USER_TOKEN,
             torch_dtype=self.dtype,
             device_map="cuda",
             low_cpu_mem_usage=False
@@ -81,7 +85,7 @@ class ModelRetriever:
         # Report memory and completion
         total_params = sum(p.numel() for p in self.model.parameters())
         self.monitor.display("ModelRetriever", f"Model total parameters: {total_params:,}")
-        self.monitor.report_gpu_memory("ModelRetriever")
+        self.monitor.report_gpu_memory()
 
     def seed_custom_embeddings(self, seed_map, model, tokenizer):
     
@@ -197,3 +201,38 @@ class ModelRetriever:
             self.monitor.display("Model LoRA report", results)
         else:
             self.monitor.display("Model LoRA report", "Model {self.model_id} not loaded")
+
+class CausalLMWithCheckpointing(MistralForCausalLM):
+    def __init__(self, config, use_checkpoint=True, **kwargs):
+        super().__init__(config)
+        self.use_checkpoint = use_checkpoint
+        
+    @classmethod
+    def from_pretrained(cls, model_id, **kwargs):
+        config = AutoConfig.from_pretrained(model_id, token=kwargs.get("token"))
+        use_checkpoint = kwargs.pop("use_checkpoint", True)
+        base_model = MistralForCausalLM.from_pretrained(model_id, config=config, **kwargs)
+    
+        model = cls(config=config, use_checkpoint=use_checkpoint)
+        model.load_state_dict(base_model.state_dict())
+    
+        return model
+
+
+    def forward(self, input_ids=None, attention_mask=None, **kwargs):
+        # Get embeddings
+        inputs_embeds = self.transformer.wte(input_ids)
+        hidden_states = inputs_embeds
+
+        # Apply transformer blocks
+        for block in self.transformer.h:
+            if self.use_checkpoint:
+                hidden_states = checkpoint(block, hidden_states, attention_mask)
+            else:
+                hidden_states = block(hidden_states, attention_mask)[0]
+
+        # Final layer norm + LM head
+        hidden_states = self.transformer.ln_f(hidden_states)
+        logits = self.lm_head(hidden_states)
+
+        return {"logits": logits}

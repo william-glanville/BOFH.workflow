@@ -15,6 +15,7 @@ from workflow_runner import WorkflowRunner
 
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
+telemetry.TELEMETRY_MODE = telemetry.TELEMETRY_MODE_NETWORK
 
 BUTTON_WIDTH = 180
 
